@@ -1,3 +1,3 @@
-module github.com/xenomote/object_language
+module github.com/xenomote/json_matcher
 
 go 1.19
