@@ -1,8 +1,6 @@
 package pattern
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type BoundLiteral struct {
 	Name  Binding
@@ -12,21 +10,21 @@ type BoundLiteral struct {
 func (b BoundLiteral) Match(s string, old_bindings map[string]string) (map[string]string, error) {
 	new_bindings := make(map[string]string)
 
-	a_matched, err := b.Value.Match(s, old_bindings)
+	matched, err := b.Name.Match(s, old_bindings)
 	if err != nil {
 		return nil, err
 	}
 
-	for k, v := range a_matched {
+	for k, v := range matched {
 		new_bindings[k] = v
 	}
 
-	b_matched, err := b.Value.Match(s, old_bindings)
+	matched, err = b.Value.Match(s, old_bindings)
 	if err != nil {
 		return nil, err
 	}
 
-	for k, v := range b_matched {
+	for k, v := range matched {
 		new_bindings[k] = v
 	}
 
@@ -34,7 +32,7 @@ func (b BoundLiteral) Match(s string, old_bindings map[string]string) (map[strin
 }
 
 func (b BoundLiteral) Validate(bindings map[string]bool) error {
-	name := string(b.Name)
+	name := b.Name.String()
 	if bindings[name] {
 		return fmt.Errorf("illegal self reference to %s", name)
 	}
