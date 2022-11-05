@@ -1,13 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
-	"github.com/xenomote/object_language/pattern"
+	"github.com/xenomote/json_matcher/pattern"
 )
 
 func main() {
+	log.SetFlags(0)
+
 	p, err := pattern.Parse(`
 	{
 		"type": "event.source",
@@ -27,7 +28,7 @@ func main() {
 		"type": "event.source",
 		"data": {
 			"metadata": {
-				"set": "null"
+				"set": null
 			}
 		}
 	}
@@ -36,5 +37,5 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(b)
+	log.Println(b)
 }

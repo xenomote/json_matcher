@@ -1,0 +1,19 @@
+# ignore everything
+*
+
+# include go sources
+!*.go
+!go.sum
+!go.mod
+
+# include goyacc sources
+!*.y
+
+# include project management files
+!.gitignore
+!README.md
+!LICENSE
+!Makefile
+
+# apply to subdirectories
+!*/

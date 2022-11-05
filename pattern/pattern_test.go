@@ -3,7 +3,7 @@ package pattern_test
 import (
 	"testing"
 
-	"github.com/xenomote/object_language/pattern"
+	"github.com/xenomote/json_matcher/pattern"
 )
 
 func TestParse(t *testing.T) {
