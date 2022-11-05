@@ -5,10 +5,25 @@ import (
 	"fmt"
 )
 
+type Object struct {
+	Fields []Field
+}
+
+type Field struct {
+	Key      Key
+	Value    Value
+	Optional bool
+}
+
+type Key interface {
+	Key() (string, error)
+	String() string
+}
+
 func (o Object) Validate(bindings map[string]bool) error {
 	keys := make(map[string]bool)
-	for _, d := range o.Definitions {
-		key := d.Key.String()
+	for _, f := range o.Fields {
+		key := f.Key.String()
 		if _, exists := keys[key]; exists {
 			return fmt.Errorf("duplicate key %s", key)
 		}
@@ -16,9 +31,14 @@ func (o Object) Validate(bindings map[string]bool) error {
 		keys[key] = true
 	}
 
-	for _, d := range o.Definitions {
-		if err := d.Validate(bindings); err != nil {
-			return fmt.Errorf("at key %s: %s", d.Key, err)
+	for _, f := range o.Fields {
+		value, ok := f.Value.(Validator)
+		if !ok {
+			continue
+		}
+
+		if err := value.Validate(bindings); err != nil {
+			return fmt.Errorf("at key %s: %s", f.Key, err)
 		}
 	}
 
@@ -48,7 +68,7 @@ func (o Object) Match(s string, old_bindings map[string]string) (new_bindings ma
 		return nil, fmt.Errorf("%s could not be interpreted as an object: %w", input, err)
 	}
 
-	for _, definition := range o.Definitions {
+	for _, definition := range o.Fields {
 		key, err := definition.Key.Key()
 		if err != nil {
 			return nil, err
@@ -68,7 +88,7 @@ func (o Object) Match(s string, old_bindings map[string]string) (new_bindings ma
 			}
 		}
 
-		matched, err := definition.Assignment.Match(string(value), bindings)
+		matched, err := definition.Value.Match(string(value), bindings)
 		if err != nil {
 			return nil, fmt.Errorf("could not match field %s\"%s\": %s", prefix, key, err)
 		}
@@ -89,10 +109,10 @@ func (o Object) Match(s string, old_bindings map[string]string) (new_bindings ma
 func (o Object) String() string {
 	s := "{"
 
-	for i, definition := range o.Definitions {
+	for i, definition := range o.Fields {
 		s += "\n" + indent(definition.String())
 
-		if i < len(o.Definitions)-1 {
+		if i < len(o.Fields)-1 {
 			s += ","
 		} else {
 			s += "\n"
@@ -104,10 +124,10 @@ func (o Object) String() string {
 	return s
 }
 
-func (o ObjectDefinition) String() string {
+func (o Field) String() string {
 	op := ""
 	if o.Optional {
 		op = "?"
 	}
-	return o.Key.String() + op + ": " + o.Assignment.String()
+	return o.Key.String() + op + ": " + o.Value.String()
 }

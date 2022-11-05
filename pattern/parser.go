@@ -7,7 +7,27 @@ import (
 	"unicode"
 )
 
-//go:generate goyacc -o grammar.go grammar.y
+//go:generate go run golang.org/x/tools/cmd/goyacc@v0.2.0 -o grammar.go grammar.y
+
+type ValidatedPattern interface {
+	Pattern
+	Validator
+}
+
+func Parse(s string) (ValidatedPattern, error) {
+	l := lex{input: []rune(s)}
+
+	if yyParse(&l) != 0 {
+		return nil, l.err
+	}
+
+	err := l.out.Validate(map[string]bool{})
+	if err != nil {
+		return nil, err
+	}
+
+	return l.out, nil
+}
 
 const EOF = 0
 
@@ -15,7 +35,7 @@ type lex struct {
 	input []rune
 	i     int
 
-	out Pattern
+	out ValidatedPattern
 	err error
 }
 
@@ -53,7 +73,7 @@ func (l *lex) Lex(lval *yySymType) int {
 		}
 
 		if unicode.IsLetter(l.next()) {
-			return l.ident(lval)
+			return l.identifier(lval)
 		}
 
 		l.Error(fmt.Sprintf("unrecognised character %c", l.next()))
@@ -135,7 +155,7 @@ func (l *lex) str(lval *yySymType) int {
 	return STRING
 }
 
-func (l *lex) ident(lval *yySymType) int {
+func (l *lex) identifier(lval *yySymType) int {
 	var s strings.Builder
 	s.WriteRune(l.take())
 
@@ -146,19 +166,4 @@ func (l *lex) ident(lval *yySymType) int {
 	lval.str = s.String()
 
 	return IDENTIFIER
-}
-
-func Parse(s string) (Pattern, error) {
-	l := lex{input: []rune(s)}
-
-	if yyParse(&l) != 0 {
-		return nil, l.err
-	}
-
-	err := l.out.Validate(map[string]bool{})
-	if err != nil {
-		return nil, err
-	}
-
-	return l.out, nil
 }

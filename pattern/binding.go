@@ -2,6 +2,8 @@ package pattern
 
 import "fmt"
 
+type Binding Identifier
+
 func (b Binding) Match(s string, bindings map[string]string) (map[string]string, error) {
 	return map[string]string{string(b): s}, nil
 }

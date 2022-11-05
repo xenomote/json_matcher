@@ -5,6 +5,21 @@ import (
 	"fmt"
 )
 
+type Array struct {
+	Elements []Element
+}
+
+type Element struct {
+	Index    Index
+	Value    Value
+	Optional bool
+}
+
+type Index interface {
+	Index() (int, error)
+	String() string
+}
+
 func (a Array) Interpret(s string) (bindings map[string]string, err error) {
 	return a.Match(s, map[string]string{})
 }
@@ -28,7 +43,7 @@ func (a Array) Match(s string, old_bindings map[string]string) (new_bindings map
 		return nil, fmt.Errorf("%s could not be interpreted as an array: %w", input, err)
 	}
 
-	for _, definition := range a.Definitions {
+	for _, definition := range a.Elements {
 		index, err := definition.Index.Index()
 		if err != nil {
 			return nil, err
@@ -48,7 +63,7 @@ func (a Array) Match(s string, old_bindings map[string]string) (new_bindings map
 		}
 
 		value := input[index]
-		matched_bindings, err := definition.Assignment.Match(string(value), bindings)
+		matched_bindings, err := definition.Value.Match(string(value), bindings)
 		if err != nil {
 			return nil, fmt.Errorf("could not match index %s%d: %s", prefix, index, err)
 		}
@@ -68,17 +83,23 @@ func (a Array) Match(s string, old_bindings map[string]string) (new_bindings map
 
 func (a Array) Validate(bindings map[string]bool) error {
 	indices := make(map[string]bool)
-	for _, d := range a.Definitions {
-		if _, exists := indices[d.Index.String()]; exists {
-			return fmt.Errorf("duplicate index %s", d.Index.String())
+	for _, e := range a.Elements {
+		index := e.Index.String()
+		if _, exists := indices[index]; exists {
+			return fmt.Errorf("duplicate index %s", index)
 		}
 
-		indices[d.Index.String()] = true
+		indices[index] = true
 	}
 
-	for _, d := range a.Definitions {
-		if err := d.Validate(bindings); err != nil {
-			return fmt.Errorf("at index %s: %s", d.Index, err)
+	for _, e := range a.Elements {
+		value, ok := e.Value.(Validator)
+		if !ok {
+			continue
+		}
+
+		if err := value.Validate(bindings); err != nil {
+			return fmt.Errorf("at index %s: %s", e.Index, err)
 		}
 	}
 
@@ -88,10 +109,10 @@ func (a Array) Validate(bindings map[string]bool) error {
 func (a Array) String() string {
 	s := "["
 
-	for i, definition := range a.Definitions {
+	for i, definition := range a.Elements {
 		s += "\n" + indent(definition.String())
 
-		if i < len(a.Definitions)-1 {
+		if i < len(a.Elements)-1 {
 			s += ","
 		} else {
 			s += "\n"
@@ -103,10 +124,10 @@ func (a Array) String() string {
 	return s
 }
 
-func (o ArrayDefinition) String() string {
+func (o Element) String() string {
 	op := ""
 	if o.Optional {
 		op = "?"
 	}
-	return o.Index.String() + op + ": " + o.Assignment.String()
+	return o.Index.String() + op + ": " + o.Value.String()
 }

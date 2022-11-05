@@ -6,14 +6,16 @@ package pattern
     num     float64
     str     string
 
-    pattern Pattern
-    arrdef  ArrayDefinition
-    arrdefl []ArrayDefinition
-    objdef  ObjectDefinition
-    objdefl []ObjectDefinition
+    pattern ValidatedPattern
+    obj Object
+    arr Array
+    arrdef  Element
+    arrdefl []Element
+    objdef  Field
+    objdefl []Field
     opid OptionalIdentifier
     opidl []OptionalIdentifier    
-    ass Assignment    
+    val Value    
     ref Reference
     ind Index
     key Key
@@ -24,8 +26,10 @@ package pattern
 %token <num> NUMBER
 %token <str> STRING IDENTIFIER
 
-%type <pattern> array object pattern
-%type <ass> assignment literal
+%type <pattern> pattern
+%type <obj> object
+%type <arr> array
+%type <val> value binding_or_value 
 %type <arrdef> array_definition
 %type <arrdefl> array_definition_list
 %type <objdef> object_definition
@@ -51,24 +55,24 @@ array
     | '[' array_definition_list ']' { $$ = Array{$2} }
 
 array_definition_list
-    : array_definition                              { $$ = []ArrayDefinition{$1} }
+    : array_definition                              { $$ = []Element{$1} }
     | array_definition_list ',' array_definition    { $$ = append($1, $3) }
 
 array_definition
-    : index ':' assignment      { $$ = ArrayDefinition{Index: $1, Optional: false, Assignment: $3} }
-    | index '?' ':' assignment  { $$ = ArrayDefinition{Index: $1, Optional: true, Assignment: $4} }
+    : index ':' binding_or_value      { $$ = Element{Index: $1, Optional: false, Value: $3} }
+    | index '?' ':' binding_or_value  { $$ = Element{Index: $1, Optional: true, Value: $4} }
 
 object
     : '{' '}'                           { $$ = Object{} }
     | '{' object_definition_list '}'    { $$ = Object{$2} }
 
 object_definition_list
-    : object_definition                             { $$ = []ObjectDefinition{$1} }
+    : object_definition                             { $$ = []Field{$1} }
     | object_definition_list ',' object_definition  { $$ = append($1, $3) }
 
 object_definition
-    : key ':' assignment       { $$ = ObjectDefinition{Key: $1, Optional: false, Assignment: $3} }
-    | key '?' ':' assignment   { $$ = ObjectDefinition{Key: $1, Optional: true, Assignment: $4} }
+    : key ':' binding_or_value       { $$ = Field{Key: $1, Optional: false, Value: $3} }
+    | key '?' ':' binding_or_value   { $$ = Field{Key: $1, Optional: true, Value: $4} }
 
 index  
     : NUMBER    { $$ = Number($1) }
@@ -78,19 +82,20 @@ key
     : STRING    { $$ = String($1) }
     /* | reference { $$ = $1 } */
 
-assignment
-    : binding           { $$ = $1 }
-    | literal           { $$ = $1 }
-    | binding literal   { $$ = BoundLiteral{$1, Assignment($2)} }
+binding_or_value
+    : binding         { $$ = $1 }
+    | value           { $$ = $1 }
+    | binding value   { $$ = BoundLiteral{Name: $1, Value: $2} }
     
-literal
+value
     : NULL      { $$ = Null{} }
     | TRUE      { $$ = Boolean(true) }
     | FALSE     { $$ = Boolean(false) }
     | STRING    { $$ = String($1) }
     | NUMBER    { $$ = Number($1) }
+    | array     { $$ = $1 }
+    | object    { $$ = $1 }
     | reference { $$ = $1 }
-    | pattern   { $$ = $1 }
 
 binding
     : '<' '=' IDENTIFIER '>'  { $$ = Binding($3) }
