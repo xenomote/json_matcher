@@ -52,5 +52,5 @@ func (b BoundLiteral) Validate(bindings map[string]bool) error {
 }
 
 func (b BoundLiteral) String() string {
-	return b.Name.String() + b.Value.String()
+	return b.Name.String() + " " + b.Value.String()
 }

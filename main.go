@@ -13,9 +13,7 @@ func main() {
 	{
 		"type": "event.source",
 		"data": {
-			"metadata": <=x> {
-				"set": null
-			}
+			"metadata": <=x>
 		}
 	}
 	`)
@@ -37,5 +35,6 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	log.Println(p)
 	log.Println(b)
 }

@@ -83,9 +83,9 @@ func (o Object) Match(s string, old_bindings map[string]string) (new_bindings ma
 		if !key_exists {
 			if definition.Optional {
 				continue
-			} else {
-				return nil, fmt.Errorf("object did not contain required field %s\"%s\"", prefix, key)
 			}
+			
+			return nil, fmt.Errorf("object did not contain required field %s\"%s\"", prefix, key)
 		}
 
 		matched, err := definition.Value.Match(string(value), bindings)
@@ -124,10 +124,11 @@ func (o Object) String() string {
 	return s
 }
 
-func (o Field) String() string {
+func (f Field) String() string {
 	op := ""
-	if o.Optional {
+	if f.Optional {
 		op = "?"
 	}
-	return o.Key.String() + op + ": " + o.Value.String()
+
+	return f.Key.String() + op + ": " + f.Value.String()
 }

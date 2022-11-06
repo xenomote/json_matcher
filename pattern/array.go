@@ -57,9 +57,9 @@ func (a Array) Match(s string, old_bindings map[string]string) (new_bindings map
 		if index >= len(input) {
 			if definition.Optional {
 				continue
-			} else {
-				return nil, fmt.Errorf("array was not long enough to contain required index %s%d", prefix, index)
 			}
+
+			return nil, fmt.Errorf("array was not long enough to contain required index %s%d", prefix, index)
 		}
 
 		value := input[index]
@@ -124,10 +124,11 @@ func (a Array) String() string {
 	return s
 }
 
-func (o Element) String() string {
+func (e Element) String() string {
 	op := ""
-	if o.Optional {
+	if e.Optional {
 		op = "?"
 	}
-	return o.Index.String() + op + ": " + o.Value.String()
+
+	return e.Index.String() + op + ": " + e.Value.String()
 }
