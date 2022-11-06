@@ -23,10 +23,10 @@ func main() {
 	log.SetFlags(0)
 
 	f := flag.NewFlagSet("json matcher", flag.ExitOnError)
-	f.String(iArg, "", "sets the `file` to read input from")
-	f.String(oArg, "", "sets the `file` to write output to")
-	f.String(pArg, "", "sets the `pattern` to use")
-	f.String(fArg, "", "sets the `file` to read the pattern from")
+	f.String(iArg, "", "input `file` to read json structures from")
+	f.String(oArg, "", "output `file` to write json bindings to")
+	f.String(pArg, "", "string `pattern` to match")
+	f.String(fArg, "", "`file` containing pattern to match")
 	f.Parse(os.Args[1:])
 
 	var err error
@@ -35,17 +35,27 @@ func main() {
 	var pat io.Reader
 
 	f.Visit(func(f *flag.Flag) {
-		switch f.Name {
+		name := f.Name
+		value := f.Value.String()
+
+		switch name {
+		case pArg, fArg:
+			if pat != nil {
+				log.Fatalln(`pattern already specified`)
+			}
+		}
+
+		switch name {
 		case iArg:
-			input, err = os.Open(f.Value.String())
+			input, err = os.Open(value)
 		case oArg:
-			output, err = os.Create(f.Value.String())
+			output, err = os.Create(value)
 		case pArg:
-			pat = strings.NewReader(f.Value.String())
+			pat = strings.NewReader(value)
 		case fArg:
-			pat, err = os.Open(f.Value.String())
+			pat, err = os.Open(value)
 		default:
-			err = fmt.Errorf(`unhandled flag %s`, f.Name)
+			err = fmt.Errorf(`unhandled flag %s`, name)
 		}
 
 		if err != nil {
