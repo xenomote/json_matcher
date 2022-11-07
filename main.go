@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -19,43 +19,94 @@ const (
 	fArg = "f"
 )
 
+type options struct {
+	in, pat io.Reader
+	out     io.Writer
+}
+
 func main() {
 	log.SetFlags(0)
+
+	o := args(os.Args[1:])
+	input := o.inOr(os.Stdin)
+	output := o.outOr(os.Stdout)
+
+	pat, err := io.ReadAll(o.pat)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	p, err := pattern.Parse(string(pat))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	lines := bufio.NewScanner(input)
+	enc := json.NewEncoder(output)
+
+	for lines.Scan() {
+		b, err := p.Interpret(lines.Text())
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		err = enc.Encode(b)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	if lines.Err() != nil {
+		log.Fatalln(lines.Err())
+	}
+}
+
+func args(args []string) options {
+	o := options{}
 
 	f := flag.NewFlagSet("json matcher", flag.ExitOnError)
 	f.String(iArg, "", "input `file` to read json structures from")
 	f.String(oArg, "", "output `file` to write json bindings to")
 	f.String(pArg, "", "string `pattern` to match")
 	f.String(fArg, "", "`file` containing pattern to match")
-	f.Parse(os.Args[1:])
-
-	var err error
-	input := os.Stdin
-	output := os.Stdout
-	var pat io.Reader
+	f.Parse(args)
 
 	f.Visit(func(f *flag.Flag) {
 		name := f.Name
-		value := f.Value.String()
 
 		switch name {
 		case pArg, fArg:
-			if pat != nil {
+			if o.pat != nil {
 				log.Fatalln(`pattern already specified`)
+			}
+
+		case iArg:
+			if o.in != nil {
+				log.Fatalln(`input already specified`)
+			}
+
+		case oArg:
+			if o.out != nil {
+				log.Fatalln(`output already specified`)
 			}
 		}
 
+		var err error
+		value := f.Value.String()
+
 		switch name {
 		case iArg:
-			input, err = os.Open(value)
+			o.in, err = os.Open(value)
+
 		case oArg:
-			output, err = os.Create(value)
+			o.out, err = os.Create(value)
+
 		case pArg:
-			pat = strings.NewReader(value)
+			o.pat = strings.NewReader(value)
+			
 		case fArg:
-			pat, err = os.Open(value)
-		default:
-			err = fmt.Errorf(`unhandled flag %s`, name)
+			o.pat, err = os.Open(value)
 		}
 
 		if err != nil {
@@ -63,32 +114,25 @@ func main() {
 		}
 	})
 
-	if pat == nil {
+	if o.pat == nil {
 		log.Fatalln(`a pattern must be specified, either use -p or -f to set it`)
 	}
 
-	t, err := io.ReadAll(pat)
-	if err != nil {
-		log.Fatalln(err)
+	return o
+}
+
+func (o options) inOr(r io.Reader) io.Reader {
+	if o.in != nil {
+		return o.in
 	}
 
-	p, err := pattern.Parse(string(t))
-	if err != nil {
-		log.Fatalln(err)
+	return r
+}
+
+func (o options) outOr(w io.Writer) io.Writer {
+	if o.out != nil {
+		return o.out
 	}
 
-	i, err := io.ReadAll(input)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	b, err := p.Interpret(string(i))
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	err = json.NewEncoder(output).Encode(b)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	return w
 }
