@@ -7,43 +7,43 @@ type BoundLiteral struct {
 	Value Value
 }
 
-func (b BoundLiteral) Match(s string, old_bindings map[string]string) (map[string]string, error) {
-	new_bindings := make(map[string]string)
+func (b BoundLiteral) Match(s string, bOld bindings) (bindings, error) {
+	bNew := bindings{}
 
-	matched, err := b.Name.Match(s, old_bindings)
+	matched, err := b.Name.Match(s, bOld)
 	if err != nil {
 		return nil, err
 	}
 
 	for k, v := range matched {
-		new_bindings[k] = v
+		bNew[k] = v
 	}
 
-	matched, err = b.Value.Match(s, old_bindings)
+	matched, err = b.Value.Match(s, bOld)
 	if err != nil {
 		return nil, err
 	}
 
 	for k, v := range matched {
-		new_bindings[k] = v
+		bNew[k] = v
 	}
 
-	return new_bindings, nil
+	return bNew, nil
 }
 
-func (b BoundLiteral) Validate(bindings map[string]bool) error {
-	name := b.Name.String()
-	if bindings[name] {
-		return fmt.Errorf("illegal self reference to %s", name)
+func (b BoundLiteral) Validate(s set) error {
+	ref := b.Name.String()
+	if s[ref] {
+		return fmt.Errorf("illegal self reference to %s", ref)
 	}
-	bindings[name] = true
+	s[ref] = true
 
 	value, ok := b.Value.(Validator)
 	if !ok {
 		return nil
 	}
 
-	err := value.Validate(bindings)
+	err := value.Validate(s)
 	if err != nil {
 		return err
 	}

@@ -1,10 +1,27 @@
 package pattern_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/xenomote/json_matcher/pattern"
 )
+
+func TestMatches(t *testing.T) {
+	tests := []struct {
+		a interface{}
+		b interface{}
+	}{
+		{json.RawMessage(`{"x": 1, "y": 2}`), json.RawMessage(`{"y": 2, "x": 1}`)},
+		{map[string]interface{}{"x": json.RawMessage("1"), "y": json.RawMessage("2")}, json.RawMessage(`{"y": 2, "x": 1}`)},
+	}
+
+	for _, test := range tests {
+		if !pattern.Matches(test.a, test.b) {
+			t.Errorf(`%s != %s`, test.a, test.b)
+		}
+	}
+}
 
 func TestParse(t *testing.T) {
 	tests := []struct {
@@ -70,67 +87,71 @@ func TestParse(t *testing.T) {
 	}
 }
 
+type bindings = map[string]interface{}
+
 func TestInterpret(t *testing.T) {
 	tests := []struct {
 		pattern     string
 		input       string
 		shouldMatch bool
-		output      map[string]string
+		output      string
 	}{
-		{`{}`, `[]`, false, nil},
-		{`[]`, `{}`, false, nil},
+		{`{}`, `[]`, false, ``},
+		{`[]`, `{}`, false, ``},
 
-		{`{}`, `{}`, true, nil},
-		{`{}`, `{"a": 1, "b": 2, "c": 3}`, true, nil},
+		{`{}`, `{}`, true, `{}`},
+		{`{}`, `{"a": 1, "b": 2, "c": 3}`, true, `{}`},
 
-		{`{"a": 1}`, `{}`, false, nil},
-		{`{"a": 1}`, `{"b": 1}`, false, nil},
-		{`{"a": 1}`, `{"a": 2}`, false, nil},
-		{`{"a": 1}`, `{"a": 1}`, true, nil},
+		{`{"a": 1}`, `{}`, false, ``},
+		{`{"a": 1}`, `{"b": 1}`, false, ``},
+		{`{"a": 1}`, `{"a": 2}`, false, ``},
+		{`{"a": 1}`, `{"a": 1}`, true, `{}`},
 
-		{`{"a"?: 1}`, `{}`, true, nil},
-		{`{"a"?: 1}`, `{"a": 1}`, true, nil},
-		{`{"a"?: 1}`, `{"a": 2}`, false, nil},
+		{`{"a"?: 1}`, `{}`, true, `{}`},
+		{`{"a"?: 1}`, `{"a": 1}`, true, `{}`},
+		{`{"a"?: 1}`, `{"a": 2}`, false, ``},
 
-		{`{"a": <=x>}`, `{"a": 1}`, true, map[string]string{"x": "1"}},
-		{`{"a": <=x>, "b": <=y>}`, `{"a": 1, "b": 2}`, true, map[string]string{"x": "1", "y": "2"}},
-		{`{"a": <=x>, "b": <=y>}`, `{"b": 2, "a": 1}`, true, map[string]string{"x": "1", "y": "2"}},
-		{`{"b": <=y>, "a": <=x>}`, `{"a": 1, "b": 2}`, true, map[string]string{"x": "1", "y": "2"}},
-		{`{"b": <=y>, "a": <=x>}`, `{"b": 2, "a": 1}`, true, map[string]string{"x": "1", "y": "2"}},
+		{`{"a": <=x>}`, `{"a": 1}`, true, `{"x": 1}`},
+		{`{"a": <=x>, "b": <=y>}`, `{"a": 1, "b": 2}`, true, `{"x": 1, "y": 2}`},
+		{`{"a": <=x>, "b": <=y>}`, `{"b": 2, "a": 1}`, true, `{"x": 1, "y": 2}`},
+		{`{"b": <=y>, "a": <=x>}`, `{"a": 1, "b": 2}`, true, `{"x": 1, "y": 2}`},
+		{`{"b": <=y>, "a": <=x>}`, `{"b": 2, "a": 1}`, true, `{"x": 1, "y": 2}`},
 
-		{`{"a"?: <=x>}`, `{"a": 1}`, true, map[string]string{"x": "1"}},
-		{`{"a"?: <=x>}`, `{}`, true, nil},
+		{`{"a"?: <=x>}`, `{"a": 1}`, true, `{"x": 1}`},
+		{`{"a"?: <=x>}`, `{}`, true, `{}`},
 
-		{`[]`, `[]`, true, nil},
-		{`[]`, `[1, 2, 3]`, true, nil},
+		{`[]`, `[]`, true, `{}`},
+		{`[]`, `[1, 2, 3]`, true, `{}`},
 
-		{`[1: 1]`, `[]`, false, nil},
-		{`[1: 1]`, `[1]`, false, nil},
-		{`[1: 1]`, `[1, 2]`, false, nil},
-		{`[1: 1]`, `[2, 1]`, true, nil},
+		{`[1: 1]`, `[]`, false, ``},
+		{`[1: 1]`, `[1]`, false, ``},
+		{`[1: 1]`, `[1, 2]`, false, ``},
+		{`[1: 1]`, `[2, 1]`, true, `{}`},
 
-		{`[0?: 1]`, `[]`, true, nil},
-		{`[0?: 1]`, `[1]`, true, nil},
-		{`[0?: 1]`, `[2]`, false, nil},
+		{`[0?: 1]`, `[]`, true, `{}`},
+		{`[0?: 1]`, `[1]`, true, `{}`},
+		{`[0?: 1]`, `[2]`, false, ``},
 
-		{`[1: <=x>]`, `[2, 1]`, true, map[string]string{"x": "1"}},
-		{`[0: <=x>, 1: <=y>]`, `[1, 2]`, true, map[string]string{"x": "1", "y": "2"}},
-		{`[1: <=y>, 0: <=x>]`, `[1, 2]`, true, map[string]string{"x": "1", "y": "2"}},
+		{`[1: <=x>]`, `[2, 1]`, true, `{"x": 1}`},
+		{`[0: <=x>, 1: <=y>]`, `[1, 2]`, true, `{"x": 1, "y": 2}`},
+		{`[1: <=y>, 0: <=x>]`, `[1, 2]`, true, `{"x": 1, "y": 2}`},
 
-		{`[0?: <=x>]`, `[1]`, true, map[string]string{"x": "1"}},
-		{`[0?: <=x>]`, `[]`, true, nil},
+		{`[0?: <=x>]`, `[1]`, true, `{"x": 1}`},
+		{`[0?: <=x>]`, `[]`, true, `{}`},
 
-		{`{"a": <=x>, "b": <x>}`, `{"a": 1, "b": 1}`, true, map[string]string{"x": "1"}},
-		{`{"a": <=x>, "b": <x>}`, `{"a": 1, "b": 2}`, false, nil},
+		{`{"a": <=x>, "b": <x>}`, `{"a": 1, "b": 1}`, true, `{"x": 1}`},
+		{`{"a": <=x>, "b": <x>}`, `{"a": {"x": 1, "y": 2}, "b": {"y": 2, "x": 1}}`, true, `{"x": {"x":1, "y":2}}`},
+		{`{"a": <=x>, "b": <x>}`, `{"a": {"y": 2, "x": 1}, "b": {"x": 1, "y": 2}}`, true, `{"x": {"x":1, "y":2}}`},
+		{`{"a": <=x>, "b": <x>}`, `{"a": 1, "b": 2}`, false, ``},
 
-		{`{"a": {"b": <=x>}, "c": <x>}`, `{"a": {"b": 1}, "c": 1}`, true, map[string]string{"x": "1"}},
-		{`{"a": {"b": <=x>}, "c": <x>}`, `{"a": {"b": 1}, "c": 2}`, false, nil},
+		{`{"a": {"b": <=x>}, "c": <x>}`, `{"a": {"b": 1}, "c": 1}`, true, `{"x": 1}`},
+		{`{"a": {"b": <=x>}, "c": <x>}`, `{"a": {"b": 1}, "c": 2}`, false, ``},
 
-		{`[0: <=x>, 1: <x>]`, `[1, 1]`, true, map[string]string{"x": "1"}},
-		{`[0: <=x>, 1: <x>]`, `[1, 2]`, false, nil},
+		{`[0: <=x>, 1: <x>]`, `[1, 1]`, true, `{"x": 1}`},
+		{`[0: <=x>, 1: <x>]`, `[1, 2]`, false, ``},
 
-		{`[0: [0: <=x>], 1: <x>]`, `[[1], 1]`, true, map[string]string{"x": "1"}},
-		{`[0: [0: <=x>], 1: <x>]`, `[[1], 2]`, false, nil},
+		{`[0: [0: <=x>], 1: <x>]`, `[[1], 1]`, true, `{"x": 1}`},
+		{`[0: [0: <=x>], 1: <x>]`, `[[1], 2]`, false, ``},
 	}
 
 	for _, test := range tests {
@@ -142,31 +163,30 @@ func TestInterpret(t *testing.T) {
 			}
 
 			b, err := p.Interpret(test.input)
-			if test.shouldMatch != (err == nil) {
-				if test.shouldMatch {
-					t.Fatalf("%s failed to match: %s", name, err)
-				} else {
-					t.Fatalf("%s should not have matched", name)
-				}
 
+			if test.shouldMatch && err != nil {
+				t.Fatalf(`'%s' failed to match: %s`, name, err)
 			}
 
-			for k := range test.output {
-				if _, exists := b[k]; !exists {
-					t.Errorf("output did not contain expected binding %s", k)
-				}
+			if !test.shouldMatch && err == nil {
+				t.Fatalf(`'%s' should not have matched`, name)
 			}
 
-			for k := range b {
-				if _, exists := test.output[k]; !exists {
-					t.Errorf("output contained unexpected binding %s", k)
-				}
+			if !test.shouldMatch {
+				return
 			}
 
-			for k, v1 := range test.output {
-				if v2, exists := b[k]; exists && v1 != v2 {
-					t.Errorf("output for %s did not match expected value: %s != %s", k, v2, v1)
-				}
+			var a interface{}
+			err = json.Unmarshal([]byte(test.output), &a)
+			if err != nil {
+				t.Fatalf(`bad test pattern '%s': %s`, test.output, err)
+			}
+
+			if !pattern.Matches(a, b) {
+				ab, _ := json.Marshal(a)
+				bb, _ := json.Marshal(b)
+
+				t.Fatalf("'%s' did not match: \n'%s' != \n'%s'", name, string(ab), string(bb))
 			}
 		})
 	}

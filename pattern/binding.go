@@ -1,29 +1,28 @@
 package pattern
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 )
 
 type Binding Identifier
 
-func (b Binding) Match(s string, bindings map[string]string) (map[string]string, error) {
-	out := bytes.Buffer{}
-	err := json.Compact(&out, []byte(s))
+func (b Binding) Match(s string, _ bindings) (bindings, error) {
+	var out interface{}
+	err := json.Unmarshal([]byte(s), &out)
 	if err != nil {
 		return nil, err
 	}
 
-	return map[string]string{string(b): out.String()}, nil
+	return bindings{string(b): out}, nil
 }
 
-func (b Binding) Validate(bindings map[string]bool) error {
-	if _, exists := bindings[string(b)]; exists {
+func (b Binding) Validate(s set) error {
+	if s[string(b)] {
 		return fmt.Errorf("duplicate binding %s", b)
 	}
 
-	bindings[string(b)] = true
+	s[string(b)] = true
 	return nil
 }
 

@@ -20,29 +20,28 @@ type Index interface {
 	String() string
 }
 
-func (a Array) Interpret(s string) (bindings map[string]string, err error) {
-	return a.Match(s, map[string]string{})
+func (a Array) Interpret(s string) (bindings, error) {
+	return a.Match(s, bindings{})
 }
 
-func (a Array) Match(s string, old_bindings map[string]string) (new_bindings map[string]string, err error) {
-	new_bindings = map[string]string{}
-
-	bindings := map[string]string{}
-	for k, v := range old_bindings {
-		bindings[k] = v
+func (a Array) Match(s string, bOld bindings) (bindings, error) {
+	bCopy := bindings{}
+	for k, v := range bOld {
+		bCopy[k] = v
 	}
 
 	var input []json.RawMessage
-	err = json.Unmarshal([]byte(s), &input)
+	err := json.Unmarshal([]byte(s), &input)
 	if err != nil {
 		input := "input"
 		if len(s) < 10 {
 			input = "\"" + s + "\""
 		}
 
-		return nil, fmt.Errorf("%s could not be interpreted as an array: %w", input, err)
+		return nil, fmt.Errorf("%s could not be interpreted as an array", input)
 	}
 
+	bNew := bindings{}
 	for _, definition := range a.Elements {
 		index, err := definition.Index.Index()
 		if err != nil {
@@ -63,26 +62,26 @@ func (a Array) Match(s string, old_bindings map[string]string) (new_bindings map
 		}
 
 		value := input[index]
-		matched_bindings, err := definition.Value.Match(string(value), bindings)
+		matched_bindings, err := definition.Value.Match(string(value), bCopy)
 		if err != nil {
 			return nil, fmt.Errorf("could not match index %s%d: %s", prefix, index, err)
 		}
 
 		for k, v := range matched_bindings {
-			if _, k_exists := bindings[k]; k_exists {
+			if _, k_exists := bCopy[k]; k_exists {
 				return nil, fmt.Errorf("binding for %s already exists and cannot be overwritten", k)
 			}
 
-			bindings[k] = v
-			new_bindings[k] = v
+			bCopy[k] = v
+			bNew[k] = v
 		}
 	}
 
-	return new_bindings, nil
+	return bNew, nil
 }
 
-func (a Array) Validate(bindings map[string]bool) error {
-	indices := make(map[string]bool)
+func (a Array) Validate(s set) error {
+	indices := set{}
 	for _, e := range a.Elements {
 		index := e.Index.String()
 		if _, exists := indices[index]; exists {
@@ -98,7 +97,7 @@ func (a Array) Validate(bindings map[string]bool) error {
 			continue
 		}
 
-		if err := value.Validate(bindings); err != nil {
+		if err := value.Validate(s); err != nil {
 			return fmt.Errorf("at index %s: %s", e.Index, err)
 		}
 	}

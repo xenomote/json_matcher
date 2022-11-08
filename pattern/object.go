@@ -20,15 +20,14 @@ type Key interface {
 	String() string
 }
 
-func (o Object) Validate(bindings map[string]bool) error {
-	keys := make(map[string]bool)
+func (o Object) Validate(s set) error {
+	sObj := set{}
 	for _, f := range o.Fields {
-		key := f.Key.String()
-		if _, exists := keys[key]; exists {
-			return fmt.Errorf("duplicate key %s", key)
+		ref := f.Key.String()
+		if sObj[ref] {
+			return fmt.Errorf("duplicate key %s", ref)
 		}
-
-		keys[key] = true
+		sObj[ref] = true
 	}
 
 	for _, f := range o.Fields {
@@ -37,7 +36,7 @@ func (o Object) Validate(bindings map[string]bool) error {
 			continue
 		}
 
-		if err := value.Validate(bindings); err != nil {
+		if err := value.Validate(s); err != nil {
 			return fmt.Errorf("at key %s: %s", f.Key, err)
 		}
 	}
@@ -45,29 +44,28 @@ func (o Object) Validate(bindings map[string]bool) error {
 	return nil
 }
 
-func (o Object) Interpret(s string) (bindings map[string]string, err error) {
-	return o.Match(s, map[string]string{})
+func (o Object) Interpret(s string) (bindings, error) {
+	return o.Match(s, bindings{})
 }
 
-func (o Object) Match(s string, old_bindings map[string]string) (new_bindings map[string]string, err error) {
-	new_bindings = map[string]string{}
-
-	bindings := map[string]string{}
-	for k, v := range old_bindings {
-		bindings[k] = v
+func (o Object) Match(s string, bOld bindings) (bindings, error) {
+	bCopy := bindings{}
+	for k, v := range bOld {
+		bCopy[k] = v
 	}
 
 	var input map[string]json.RawMessage
-	err = json.Unmarshal([]byte(s), &input)
+	err := json.Unmarshal([]byte(s), &input)
 	if err != nil {
 		input := "input"
 		if len(s) < 10 {
 			input = "\"" + s + "\""
 		}
 
-		return nil, fmt.Errorf("%s could not be interpreted as an object: %w", input, err)
+		return nil, fmt.Errorf("%s could not be interpreted as an object", input)
 	}
 
+	bNew := bindings{}
 	for _, definition := range o.Fields {
 		key, err := definition.Key.Key()
 		if err != nil {
@@ -84,26 +82,26 @@ func (o Object) Match(s string, old_bindings map[string]string) (new_bindings ma
 			if definition.Optional {
 				continue
 			}
-			
+
 			return nil, fmt.Errorf("object did not contain required field %s\"%s\"", prefix, key)
 		}
 
-		matched, err := definition.Value.Match(string(value), bindings)
+		matched, err := definition.Value.Match(string(value), bCopy)
 		if err != nil {
 			return nil, fmt.Errorf("could not match field %s\"%s\": %s", prefix, key, err)
 		}
 
 		for k, v := range matched {
-			if _, k_exists := bindings[k]; k_exists {
+			if _, k_exists := bCopy[k]; k_exists {
 				return nil, fmt.Errorf("binding for %s already exists and cannot be overwritten", k)
 			}
 
-			bindings[k] = v
-			new_bindings[k] = v
+			bCopy[k] = v
+			bNew[k] = v
 		}
 	}
 
-	return new_bindings, nil
+	return bNew, nil
 }
 
 func (o Object) String() string {

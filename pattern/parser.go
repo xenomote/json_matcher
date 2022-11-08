@@ -21,7 +21,7 @@ func Parse(s string) (ValidatedPattern, error) {
 		return nil, l.err
 	}
 
-	err := l.out.Validate(map[string]bool{})
+	err := l.out.Validate(set{})
 	if err != nil {
 		return nil, err
 	}

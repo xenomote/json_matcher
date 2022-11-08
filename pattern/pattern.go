@@ -1,17 +1,22 @@
 package pattern
 
-import "strings"
+import (
+	"strings"
+)
+
+type bindings = map[string]interface{}
+type set = map[string]bool
 
 type Pattern interface {
-	Interpret(string) (map[string]string, error)
+	Interpret(string) (bindings, error)
 }
 
 type Validator interface {
-	Validate(bindings map[string]bool) error
+	Validate(set) error
 }
 
 type Value interface {
-	Match(string, map[string]string) (map[string]string, error)
+	Match(string, bindings) (bindings, error)
 	String() string
 }
 
