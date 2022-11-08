@@ -59,7 +59,7 @@ func (o Object) Match(s string, bOld bindings) (bindings, error) {
 	if err != nil {
 		input := "input"
 		if len(s) < 10 {
-			input = "\"" + s + "\""
+			input = "'" + s + "'"
 		}
 
 		return nil, fmt.Errorf("%s could not be interpreted as an object", input)
