@@ -16,7 +16,7 @@ type Validator interface {
 }
 
 type Value interface {
-	Match(string, bindings) (bindings, error)
+	Match([]byte, bindings) (bindings, error)
 	String() string
 }
 

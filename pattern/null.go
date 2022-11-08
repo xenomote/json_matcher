@@ -4,8 +4,8 @@ import "fmt"
 
 type Null struct{}
 
-func (Null) Match(s string, _ bindings) (bindings, error) {
-	if s != "null" {
+func (Null) Match(s []byte, _ bindings) (bindings, error) {
+	if string(s) != "null" {
 		return nil, fmt.Errorf("expected null but matched %s", s)
 	}
 

@@ -33,7 +33,7 @@ func (r Reference) Validate(s set) error {
 	return nil
 }
 
-func (r Reference) Match(s string, b bindings) (bindings, error) {
+func (r Reference) Match(s []byte, b bindings) (bindings, error) {
 	ref := string(r[0].Identifier)
 
 	y, exists := b[ref]
@@ -42,7 +42,7 @@ func (r Reference) Match(s string, b bindings) (bindings, error) {
 	}
 
 	var x interface{}
-	err := json.Unmarshal([]byte(s), &x)
+	err := json.Unmarshal(s, &x)
 	if err != nil {
 		return nil, fmt.Errorf(`could not unmarshal bound value to match: %s`, err)
 	}

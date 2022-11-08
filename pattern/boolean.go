@@ -15,8 +15,8 @@ func (b Boolean) String() string {
 	}
 }
 
-func (b Boolean) Match(s string, _ bindings) (bindings, error) {
-	x, err := strconv.ParseBool(s)
+func (b Boolean) Match(s []byte, _ bindings) (bindings, error) {
+	x, err := strconv.ParseBool(string(s))
 	if err != nil {
 		return nil, fmt.Errorf("expected %s but matched value %s could not be interpreted as a boolean", b, s)
 	}

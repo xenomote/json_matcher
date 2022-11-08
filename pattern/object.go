@@ -45,21 +45,21 @@ func (o Object) Validate(s set) error {
 }
 
 func (o Object) Interpret(s string) (bindings, error) {
-	return o.Match(s, bindings{})
+	return o.Match([]byte(s), bindings{})
 }
 
-func (o Object) Match(s string, bOld bindings) (bindings, error) {
+func (o Object) Match(s []byte, bOld bindings) (bindings, error) {
 	bCopy := bindings{}
 	for k, v := range bOld {
 		bCopy[k] = v
 	}
 
 	var input map[string]json.RawMessage
-	err := json.Unmarshal([]byte(s), &input)
+	err := json.Unmarshal(s, &input)
 	if err != nil {
 		input := "input"
 		if len(s) < 10 {
-			input = "'" + s + "'"
+			input = "'" + string(s) + "'"
 		}
 
 		return nil, fmt.Errorf("%s could not be interpreted as an object", input)
@@ -86,7 +86,7 @@ func (o Object) Match(s string, bOld bindings) (bindings, error) {
 			return nil, fmt.Errorf("object did not contain required field %s\"%s\"", prefix, key)
 		}
 
-		matched, err := definition.Value.Match(string(value), bCopy)
+		matched, err := definition.Value.Match(value, bCopy)
 		if err != nil {
 			return nil, fmt.Errorf("could not match field %s\"%s\": %s", prefix, key, err)
 		}

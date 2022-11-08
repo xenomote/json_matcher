@@ -21,21 +21,21 @@ type Index interface {
 }
 
 func (a Array) Interpret(s string) (bindings, error) {
-	return a.Match(s, bindings{})
+	return a.Match([]byte(s), bindings{})
 }
 
-func (a Array) Match(s string, bOld bindings) (bindings, error) {
+func (a Array) Match(s []byte, bOld bindings) (bindings, error) {
 	bCopy := bindings{}
 	for k, v := range bOld {
 		bCopy[k] = v
 	}
 
 	var input []json.RawMessage
-	err := json.Unmarshal([]byte(s), &input)
+	err := json.Unmarshal(s, &input)
 	if err != nil {
 		input := "input"
 		if len(s) < 10 {
-			input = "'" + s + "'"
+			input = "'" + string(s) + "'"
 		}
 
 		return nil, fmt.Errorf("%s could not be interpreted as an array", input)
@@ -62,7 +62,7 @@ func (a Array) Match(s string, bOld bindings) (bindings, error) {
 		}
 
 		value := input[index]
-		matched_bindings, err := definition.Value.Match(string(value), bCopy)
+		matched_bindings, err := definition.Value.Match(value, bCopy)
 		if err != nil {
 			return nil, fmt.Errorf("could not match index %s%d: %s", prefix, index, err)
 		}

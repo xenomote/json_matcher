@@ -7,7 +7,7 @@ type BoundLiteral struct {
 	Value Value
 }
 
-func (b BoundLiteral) Match(s string, bOld bindings) (bindings, error) {
+func (b BoundLiteral) Match(s []byte, bOld bindings) (bindings, error) {
 	bNew := bindings{}
 
 	matched, err := b.Name.Match(s, bOld)
